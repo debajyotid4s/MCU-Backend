@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Firebase service account key (if downloaded as JSON)
+*serviceAccountKey*.json
+firebase-adminsdk*.json
