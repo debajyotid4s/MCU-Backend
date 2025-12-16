@@ -1,54 +1,54 @@
 /**
- * Whisper Configuration
+ * Whisper Configuration (using Groq - FREE!)
  * 
- * Initializes OpenAI client for Whisper speech-to-text.
- * Uses OpenAI's Whisper API for audio transcription.
+ * Uses Groq's Whisper API for speech-to-text.
+ * Groq offers free tier with fast inference.
  * 
  * Environment Variables Required:
- * - OPENAI_API_KEY: Your OpenAI API key
+ * - GROQ_API_KEY: Your Groq API key (free at console.groq.com)
  */
 
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 
 // Singleton instance
-let openaiClient = null;
+let groqClient = null;
 
 /**
- * Initialize OpenAI client for Whisper
- * @returns {OpenAI} OpenAI client instance
+ * Initialize Groq client for Whisper
+ * @returns {Groq} Groq client instance
  */
 function initializeWhisper() {
-  if (openaiClient) {
-    console.log('[Whisper] Using existing OpenAI instance');
-    return openaiClient;
+  if (groqClient) {
+    console.log('[Whisper] Using existing Groq instance');
+    return groqClient;
   }
 
-  console.log('[Whisper] Initializing OpenAI client...');
+  console.log('[Whisper] Initializing Groq client...');
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY environment variable is not set');
+    throw new Error('GROQ_API_KEY environment variable is not set');
   }
 
-  openaiClient = new OpenAI({
+  groqClient = new Groq({
     apiKey: apiKey
   });
 
   console.log('[Whisper] Successfully initialized');
-  return openaiClient;
+  return groqClient;
 }
 
 /**
- * Get OpenAI client instance
- * @returns {OpenAI} OpenAI client
+ * Get Groq client instance
+ * @returns {Groq} Groq client
  */
-export function getOpenAIClient() {
-  if (!openaiClient) {
+export function getGroqClient() {
+  if (!groqClient) {
     return initializeWhisper();
   }
-  return openaiClient;
+  return groqClient;
 }
 
 export default {
-  getOpenAIClient
+  getGroqClient
 };

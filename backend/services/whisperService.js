@@ -1,8 +1,11 @@
 /**
- * Whisper Speech-to-Text Service
+ * Whisper Speech-to-Text Service (using Groq - FREE!)
  * 
- * Handles audio transcription using OpenAI's Whisper API.
+ * Handles audio transcription using Groq's Whisper API.
  * Accepts base64-encoded WAV audio from ESP32.
+ * 
+ * Groq provides FREE Whisper API with fast inference.
+ * Get your free API key at: https://console.groq.com
  * 
  * Supports:
  * - WAV format (recommended for ESP32)
@@ -10,7 +13,7 @@
  * - 16kHz sample rate (common for ESP32)
  */
 
-import { getOpenAIClient } from '../config/whisper.js';
+import { getGroqClient } from '../config/whisper.js';
 
 /**
  * Maximum audio duration in seconds
@@ -24,14 +27,14 @@ const MAX_AUDIO_DURATION_SECONDS = 4;
 const MAX_AUDIO_SIZE_BYTES = 200 * 1024; // 200KB limit
 
 /**
- * Transcribe audio to text using Whisper
+ * Transcribe audio to text using Groq's Whisper
  * 
  * @param {string} audioBase64 - Base64 encoded WAV audio
  * @returns {Promise<string>} Transcribed text
  * @throws {Error} If transcription fails
  */
 export async function transcribeAudio(audioBase64) {
-  console.log('[WhisperService] Starting transcription...');
+  console.log('[WhisperService] Starting transcription with Groq...');
 
   // Validate input
   if (!audioBase64 || typeof audioBase64 !== 'string') {
@@ -54,14 +57,14 @@ export async function transcribeAudio(audioBase64) {
       type: 'audio/wav'
     });
 
-    // Get OpenAI client
-    const openai = getOpenAIClient();
+    // Get Groq client
+    const groq = getGroqClient();
 
-    // Call Whisper API
-    const transcription = await openai.audio.transcriptions.create({
+    // Call Groq's Whisper API
+    const transcription = await groq.audio.transcriptions.create({
       file: audioFile,
-      model: 'whisper-1',
-      language: 'en', // Set to English, change if needed
+      model: 'whisper-large-v3',  // Best quality, free on Groq
+      language: 'en',             // Set to English, change if needed
       response_format: 'text'
     });
 
@@ -86,6 +89,9 @@ export async function transcribeAudio(audioBase64) {
     }
     if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
       throw new Error('Transcription service timed out. Please try again.');
+    }
+    if (error.message.includes('rate_limit')) {
+      throw new Error('Rate limit reached. Please wait a moment.');
     }
 
     throw new Error(`Transcription failed: ${error.message}`);
