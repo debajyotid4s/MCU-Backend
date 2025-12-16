@@ -62,11 +62,10 @@ function initializeGemini() {
   genAI = new GoogleGenerativeAI(apiKey);
 
   // Get the Gemini model
-  // Using gemini-2.0-flash (latest fast model)
+  // Using gemini-pro (stable, widely available)
   model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-pro',
     generationConfig,
-    systemInstruction,
   });
 
   console.log('[Gemini] Successfully initialized');
