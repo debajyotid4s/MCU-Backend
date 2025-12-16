@@ -2,7 +2,7 @@
   "name": "mcu-backend-nodejs",
   "version": "1.0.0",
   "type": "module",
-  "description": "Backend API for ESP32 Voice Assistant with Gemini AI and Firebase Realtime Database",
+  "description": "Backend API for ESP32 Voice Assistant with Whisper, Gemini AI and Firebase",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -16,6 +16,7 @@
     "firebase",
     "iot",
     "voice-assistant",
+    "whisper",
     "vercel",
     "serverless"
   ],
@@ -23,6 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "firebase-admin": "^12.7.0"
+    "firebase-admin": "^12.7.0",
+    "openai": "^4.77.0"
   }
 }

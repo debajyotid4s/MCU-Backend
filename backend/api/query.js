@@ -3,24 +3,32 @@
  * 
  * POST /api/query
  * 
- * Receives queries from ESP32, processes them with Gemini AI,
+ * Receives queries from ESP32 (text OR audio), processes with Gemini AI,
  * and stores the response in Firebase for later retrieval.
  * 
- * Request Body:
+ * Request Body (Text mode):
  * {
  *   "request_id": "unique-id-from-esp32",
  *   "text": "User's question or command"
+ * }
+ * 
+ * Request Body (Audio mode):
+ * {
+ *   "request_id": "unique-id-from-esp32",
+ *   "audio": "base64-encoded-wav-audio"
  * }
  * 
  * Response:
  * {
  *   "success": true,
  *   "request_id": "unique-id-from-esp32",
- *   "message": "Query received and processing"
+ *   "transcription": "transcribed text (if audio)",
+ *   "message": "Query processed successfully"
  * }
  */
 
 import { generateResponse } from '../services/geminiService.js';
+import { transcribeAudio, validateAudioData } from '../services/whisperService.js';
 import { 
   savePendingResponse, 
   saveResponse, 
@@ -30,7 +38,7 @@ import {
 /**
  * Validate the incoming request body
  * @param {Object} body - Request body
- * @returns {Object} Validation result with valid flag and error message
+ * @returns {Object} Validation result with valid flag, error message, and input type
  */
 function validateRequest(body) {
   // Check if body exists
@@ -53,12 +61,21 @@ function validateRequest(body) {
     return { valid: false, error: 'request_id must be 64 characters or less' };
   }
 
-  // Check text
-  if (!body.text || typeof body.text !== 'string') {
-    return { valid: false, error: 'text is required and must be a string' };
+  // Check if audio or text is provided (audio takes priority)
+  if (body.audio) {
+    // Audio mode
+    const audioValidation = validateAudioData(body.audio);
+    if (!audioValidation.valid) {
+      return { valid: false, error: audioValidation.error };
+    }
+    return { valid: true, inputType: 'audio' };
   }
 
-  // Check text length
+  // Text mode
+  if (!body.text || typeof body.text !== 'string') {
+    return { valid: false, error: 'Either text or audio is required' };
+  }
+
   if (body.text.trim().length === 0) {
     return { valid: false, error: 'text cannot be empty' };
   }
@@ -67,7 +84,7 @@ function validateRequest(body) {
     return { valid: false, error: 'text must be 1000 characters or less' };
   }
 
-  return { valid: true };
+  return { valid: true, inputType: 'text' };
 }
 
 /**
@@ -107,29 +124,59 @@ export default async function handler(req, res) {
       });
     }
 
-    const { request_id, text } = req.body;
-    console.log('[QueryAPI] Processing request_id:', request_id);
+    const { request_id, text, audio } = req.body;
+    const inputType = validation.inputType;
+    
+    console.log('[QueryAPI] Processing request_id:', request_id, 'type:', inputType);
 
     // Step 1: Save pending status to Firebase (so ESP32 can start polling)
     await savePendingResponse(request_id);
 
-    // Step 2: Process with Gemini AI
-    // Note: We wait for the response here. In a production system with
-    // very high load, you might use a queue (but that adds complexity)
+    let queryText = text;
+    let transcription = null;
+
+    // Step 2: If audio, transcribe with Whisper first
+    if (inputType === 'audio') {
+      try {
+        console.log('[QueryAPI] Transcribing audio with Whisper...');
+        transcription = await transcribeAudio(audio);
+        queryText = transcription;
+        console.log('[QueryAPI] Transcription:', transcription);
+      } catch (whisperError) {
+        console.error('[QueryAPI] Whisper error:', whisperError.message);
+        await saveErrorResponse(request_id, `Transcription failed: ${whisperError.message}`);
+        
+        return res.status(200).json({
+          success: false,
+          request_id: request_id,
+          message: 'Audio transcription failed',
+          error: whisperError.message
+        });
+      }
+    }
+
+    // Step 3: Process with Gemini AI
     try {
-      const aiResponse = await generateResponse(text);
+      const aiResponse = await generateResponse(queryText);
       
-      // Step 3: Save successful response to Firebase
+      // Step 4: Save successful response to Firebase
       await saveResponse(request_id, aiResponse);
 
       console.log('[QueryAPI] Successfully processed request_id:', request_id);
 
       // Return success to ESP32
-      return res.status(200).json({
+      const response = {
         success: true,
         request_id: request_id,
         message: 'Query processed successfully'
-      });
+      };
+
+      // Include transcription if audio was used
+      if (transcription) {
+        response.transcription = transcription;
+      }
+
+      return res.status(200).json(response);
 
     } catch (geminiError) {
       // Gemini failed - save error to Firebase so ESP32 knows
@@ -140,6 +187,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         request_id: request_id,
+        transcription: transcription,
         message: 'Query received but AI processing failed',
         error: geminiError.message
       });
