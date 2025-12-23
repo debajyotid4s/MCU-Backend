@@ -62,9 +62,9 @@ function initializeGemini() {
   genAI = new GoogleGenerativeAI(apiKey);
 
   // Get the Gemini model
-  // Using gemini-2.5-flash (fast, multimodal)
+  // Using gemini-2.5-flash-lite (fastest, most efficient)
   model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash-lite',
     generationConfig,
   });
 
